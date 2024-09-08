@@ -42,12 +42,12 @@ ibdev_id=0
 ibdev_base_port=1
 NR_CN=1
 NR_MN=1
-MEMCACHED_SERVER_IP="137.110.222.243"
+MEMCACHED_SERVER_IP="10.10.1.1"
 
 LD_PRELOAD=libhugetlbfs.so HUGETLB_MORECORE=yes				\
 ./init -C 1 -L 2							\
        --machine-id=$1							\
-       --base-port-index=$ibdev_base_port -device-id=$ibdev_id		\
+       --base-port-index=$ibdev_base_port --device-id=$ibdev_id		\
        --num-clients=$NR_CN						\
        --num-memory=$NR_MN						\
        --memcached-server-ip=$MEMCACHED_SERVER_IP

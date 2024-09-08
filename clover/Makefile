@@ -17,12 +17,13 @@ CPPFLAGS := ${ENABLE_DGB} ${LTO} -O2 ${DEBUG} -std=c++14 ${INC} -Wall -Werror -g
 	-Wno-unused-result \
 	-Wno-unused-value \
 	-Wno-unused-function \
+	-Wno-unused-variable \
 	-Wno-sign-compare \
         -D BOOST_COROUTINES_NO_DEPRECATION_WARNING
 	#-Winline
 
 LDFLAGS := ${ENABLE_DGB} ${LTO} -O2 -libverbs -lrt -pthread -lmemcached -lnuma -g \
-	-lpapi -lboost_system -lboost_coroutine -lboost_thread
+	-lpapi -L/usr/local/lib -lboost_system -lboost_coroutine -lboost_thread
 
 src := ibsetup.o memcached.o \
 	mitsume_macro.o mitsume_util.o\

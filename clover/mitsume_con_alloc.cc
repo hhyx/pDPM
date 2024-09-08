@@ -7,14 +7,14 @@ const unsigned long long int MIN_LH_IN_ONE_NODE =
 unsigned long long int MITSUME_PER_NODE_LH;
 
 const unsigned long long int set_lhnum[9] = {
-    MIN_LH_IN_ONE_NODE / 100 * 1,   // 128
-    MIN_LH_IN_ONE_NODE / 100 * 2,   // 256
-    MIN_LH_IN_ONE_NODE / 100 * 3,   // 512
-    MIN_LH_IN_ONE_NODE / 100 * 98,  // 1024
-    MIN_LH_IN_ONE_NODE / 100 * 15,  // 2048
-    MIN_LH_IN_ONE_NODE / 100 * 95,  // 4096
-    MIN_LH_IN_ONE_NODE / 100 * 96,  // 8192
-    MIN_LH_IN_ONE_NODE / 100 * 98}; // latency design
+    MIN_LH_IN_ONE_NODE / 100 * 5,   // 128
+    MIN_LH_IN_ONE_NODE / 100 * 10,  // 256
+    MIN_LH_IN_ONE_NODE / 100 * 20,  // 512
+    MIN_LH_IN_ONE_NODE / 100 * 30,  // 1024
+    MIN_LH_IN_ONE_NODE / 100 * 50,  // 2048
+    MIN_LH_IN_ONE_NODE / 100 * 70,  // 4096
+    MIN_LH_IN_ONE_NODE / 100 * 90,  // 8192
+    MIN_LH_IN_ONE_NODE / 100 * 99}; // latency design
 
 /*const unsigned long long int set_lhnum[9]={
     MIN_LH_IN_ONE_NODE/100*3,      //128
