@@ -65,4 +65,7 @@ int mitsume_tool_write(struct mitsume_consumer_metadata *thread_metadata,
                        mitsume_key key, void *write_addr, uint32_t size,
                        uint64_t optional_flag, int coro_id,
                        coro_yield_t &yield);
+
+int get_hashtable_size();
+int get_queue_size();
 #endif

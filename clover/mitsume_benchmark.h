@@ -9,6 +9,14 @@
 #include <queue>
 #include <unordered_map>
 #include <vector>
+
+#include <cctype>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <unistd.h>
+
 using namespace std;
 
 int mitsume_benchmark(struct mitsume_ctx_clt *local_ctx_clt);
@@ -24,7 +32,7 @@ const static char MITSUME_YCSB_WORKLOAD_C_STRING[] =
 #define MITSUME_YCSB_MODE_A 50
 #define MITSUME_YCSB_MODE_B 5
 #define MITSUME_YCSB_MODE_C 0
-#define MITSUME_YCSB_OP_MODE MITSUME_YCSB_MODE_B
+#define MITSUME_YCSB_OP_MODE MITSUME_YCSB_MODE_C
 #define MITSUME_YCSB_KEY_RANGE 100000
 #define MITSUME_YCSB_TEST_TIME 1000000
 #define MITSUME_YCSB_VERIFY_LEVEL 0
@@ -35,10 +43,11 @@ const static char MITSUME_YCSB_WORKLOAD_C_STRING[] =
 #define MITSUME_TEST_LOAD_WRITE_NUM 4
 #define MITSUME_TEST_LOAD_READ_NUM 2
 
-#define MITSUME_BENCHMARK_THREAD_NUM            8
-#define MITSUME_BENCHMARK_REPLICATION           1
-#define MITSUME_BENCHMARK_SIZE                  1000
-#define MITSUME_BENCHMARK_TIME                  100000
-#define MITSUME_BENCHMARK_RUN_TIME              10
+#define MITSUME_BENCHMARK_THREAD_NUM 8 // Number of client threads
+#define MITSUME_BENCHMARK_REPLICATION                                          \
+  1 // The replication factor needs to be less than the MN quantity
+#define MITSUME_BENCHMARK_SIZE 1000
+#define MITSUME_BENCHMARK_TIME 100000 // banchmark size, shouldn't change
+#define MITSUME_BENCHMARK_RUN_TIME 10 // Run time, in seconds
 
 #endif

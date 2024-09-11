@@ -14,6 +14,44 @@ volatile int ready_flag = 0;
 #define MITSUME_TEST_LOAD_READ_R2 11
 #define MITSUME_TEST_LOAD_WRITE_START 14
 
+static size_t get_mem_size() {
+  FILE *file = fopen("/proc/self/status", "r");
+  size_t result = -1;
+  char line[128];
+
+  while (fgets(line, 128, file) != nullptr) {
+    if (strncmp(line, "VmRSS:", 6) == 0) {
+      int len = strlen(line);
+
+      const char *p = line;
+      for (; std::isdigit(*p) == false; ++p) {
+      }
+
+      line[len - 3] = 0;
+      result = atoll(p);
+
+      break;
+    }
+  }
+  fclose(file);
+  return result;
+}
+
+static size_t get_stable_mem_size() {
+  auto mem_size = get_mem_size();
+  cout << "mem_size is :" << mem_size << "KB" << endl;
+  cout << "wait for mem_size to be stable" << endl;
+  sleep(1);
+  while (abs((long long)get_mem_size() - (long long)mem_size) > 10000) {
+    mem_size = get_mem_size();
+    cout << "mem_size is :" << mem_size << endl;
+    cout << "wait for mem_size to be stable" << endl;
+    cout << "sleep .." << endl;
+    sleep(1);
+  }
+  return mem_size;
+}
+
 void mitsume_test_read_ycsb(const char *input_string, int **op_key,
                             uint64_t **target_key) {
   uint64_t *key = new uint64_t[MITSUME_YCSB_SIZE];
@@ -495,6 +533,10 @@ int mitsume_benchmark_thread(int thread_num,
   }
   while (ready_flag == 0)
     ;
+
+  cout << "before start  mem size: " << get_mem_size() / 1000 << "MB" << endl;
+  get_stable_mem_size();
+
   start_flag = 1;
   cout << "start waiting" << endl;
   before = get_current_ms();
@@ -506,18 +548,23 @@ int mitsume_benchmark_thread(int thread_num,
     pthread_join(thread_job[i], NULL);
   }
   // MITSUME_PRINT("all %d threads are finished\n", thread_num);
-  cout << total_op.load() << endl;
+  cout << "total ops: " << total_op.load() << endl;
+  cout << "hashtable size: " << get_hashtable_size()
+       << " LRU queue size: " << get_queue_size() << endl;
   cout << fixed << "throughput "
        << ((float)total_op.load() / (after - before).count()) * 1000
        << " /seconds" << endl;
+
+  cout << "finish  mem size: " << get_mem_size() / 1000 << "MB" << endl;
+  get_stable_mem_size();
   // mitsume_stat_show();
   return MITSUME_SUCCESS;
 }
 
 int mitsume_benchmark(struct mitsume_ctx_clt *local_ctx_clt) {
-  mitsume_benchmark_thread(1, local_ctx_clt, &mitsume_benchmark_latency);
-  // mitsume_benchmark_thread(MITSUME_BENCHMARK_THREAD_NUM, local_ctx_clt,
-  //                          &mitsume_benchmark_ycsb);
+  // mitsume_benchmark_thread(1, local_ctx_clt, &mitsume_benchmark_latency);
+  mitsume_benchmark_thread(MITSUME_BENCHMARK_THREAD_NUM, local_ctx_clt,
+                           &mitsume_benchmark_ycsb);
   // mitsume_benchmark_thread(MITSUME_BENCHMARK_THREAD_NUM, local_ctx_clt,
   // &mitsume_benchmark_coroutine);
   // mitsume_benchmark_thread(MITSUME_TEST_LOAD_WRITE_NUM+MITSUME_TEST_LOAD_READ_NUM,

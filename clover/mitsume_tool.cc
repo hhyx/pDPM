@@ -11,6 +11,23 @@ std::unordered_map<mitsume_key, struct mitsume_hash_struct *>
 // MITSUME_TOOL_SHARE_LRU_CACHE[1<<MITSUME_LRU_BUCKET_BIT];
 queue<mitsume_key> MITSUME_TOOL_SHARE_FIFO_QUEUE[1 << MITSUME_LRU_BUCKET_BIT];
 mutex MITSUME_TOOL_SHARE_FIFO_QUEUE_LOCK[1 << MITSUME_LRU_BUCKET_BIT];
+
+int get_hashtable_size() {
+  int size = 0;
+  for (int i = 0; i < 1 << MITSUME_TOOL_QUERY_HASHTABLE_SIZE_BIT; i++) {
+    size += MITSUME_TOOL_QUERY_HASHTABLE[i].size();
+  }
+  return size;
+}
+
+int get_queue_size() {
+  int size = 0;
+  for (int i = 0; i < 1 << MITSUME_LRU_BUCKET_BIT; i++) {
+    size += MITSUME_TOOL_SHARE_FIFO_QUEUE[i].size();
+  }
+  return size;
+}
+
 /**
  * mitsume_tool_begin: calling this function will prevent concurrency between
  * epoch forwarding and operations
@@ -193,7 +210,7 @@ int mitsume_tool_local_hashtable_operations(
       // search_hash_ptr->replication_factor, key);
 
       //[CAREFUL] that all hashtable metadata should not incllude xact-area
-      //related information search_hash_ptr->ptr.pointer =
+      // related information search_hash_ptr->ptr.pointer =
       // input->ptr.pointer&(~MITSUME_PTR_MASK_XACT_AREA);
       for (per_replication = 0;
            per_replication < search_hash_ptr->replication_factor;
@@ -259,23 +276,27 @@ int mitsume_tool_local_hashtable_operations(
       }
 #ifdef MITSUME_ENABLE_FIFO_LRU_QUEUE
       // push into fifo queue and remove the oldset one
+      if (MITSUME_LRU_PER_QUEUE_SIZE == 0) {
+        new_entry->in_lru = 0;
+      } else {
+        int lru_target = hash_min(key, MITSUME_LRU_BUCKET_BIT);
+        MITSUME_TOOL_SHARE_FIFO_QUEUE_LOCK[lru_target].lock();
 
-      int lru_target = hash_min(key, MITSUME_LRU_BUCKET_BIT);
-      MITSUME_TOOL_SHARE_FIFO_QUEUE_LOCK[lru_target].lock();
-
-      MITSUME_TOOL_SHARE_FIFO_QUEUE[lru_target].push(key);
-      if (MITSUME_TOOL_SHARE_FIFO_QUEUE[lru_target].size() >
-          MITSUME_LRU_PER_QUEUE_SIZE) {
-        mitsume_key old_key = MITSUME_TOOL_SHARE_FIFO_QUEUE[lru_target].front();
-        int old_bucket =
-            hash_min(old_key, MITSUME_TOOL_QUERY_HASHTABLE_SIZE_BIT);
-        MITSUME_TOOL_SHARE_FIFO_QUEUE[lru_target].pop();
-        MITSUME_TOOL_QUERY_HASHTABLE_LOCK[old_bucket].lock();
-        MITSUME_TOOL_QUERY_HASHTABLE[old_bucket][old_key]->in_lru = 0;
-        MITSUME_TOOL_QUERY_HASHTABLE_LOCK[old_bucket].unlock();
+        MITSUME_TOOL_SHARE_FIFO_QUEUE[lru_target].push(key);
+        if (MITSUME_TOOL_SHARE_FIFO_QUEUE[lru_target].size() >
+            MITSUME_LRU_PER_QUEUE_SIZE) {
+          mitsume_key old_key =
+              MITSUME_TOOL_SHARE_FIFO_QUEUE[lru_target].front();
+          int old_bucket =
+              hash_min(old_key, MITSUME_TOOL_QUERY_HASHTABLE_SIZE_BIT);
+          MITSUME_TOOL_SHARE_FIFO_QUEUE[lru_target].pop();
+          MITSUME_TOOL_QUERY_HASHTABLE_LOCK[old_bucket].lock();
+          MITSUME_TOOL_QUERY_HASHTABLE[old_bucket][old_key]->in_lru = 0;
+          MITSUME_TOOL_QUERY_HASHTABLE_LOCK[old_bucket].unlock();
+        }
+        MITSUME_TOOL_SHARE_FIFO_QUEUE_LOCK[lru_target].unlock();
+        new_entry->in_lru = 1;
       }
-      MITSUME_TOOL_SHARE_FIFO_QUEUE_LOCK[lru_target].unlock();
-      new_entry->in_lru = 1;
 
 // MITSUME_TOOL_SHARE_LRU_CACHE[lru_bucket].put(key,
 // MITSUME_LRU_DEFAULT_UNUSED_VALUE); create an item in LRU table, and kick out
@@ -792,11 +813,11 @@ int result_list[MITSUME_MAX_PARALLEL_REQUEST]={0};
     //==============================
     if (chasing_flag || chasing_asking_flag) {
       //[KNOWN ISSUE] MITSUME will ask controller to get the latest entry space
-      //if it experiences a long pointer chasing. However, if there exists a
+      // if it experiences a long pointer chasing. However, if there exists a
       // stale shortcut, which will make the returned-query go backward
       //[SOLUTION] If the return query is identical to the previous one, it
-      //should keep pointer chasing in stead of using the value which is
-      //returned by controller
+      // should keep pointer chasing in stead of using the value which is
+      // returned by controller
       if (chasing_asking_flag) {
         mitsume_tool_query(thread_metadata, key, query,
                            MITSUME_TOOL_QUERY_FORCE_REMOTE |
@@ -2022,7 +2043,7 @@ int mitsume_tool_write(struct mitsume_consumer_metadata *thread_metadata,
           &thread_metadata->local_ctx_clt->all_lh_attr[MITSUME_GET_PTR_LH(
               newspace.replication_ptr[per_replication].pointer)];
       //[CAUTION] we are using the same memory space to read data which will
-      //corrupt the data. however, this is a read validation which should be
+      // corrupt the data. however, this is a read validation which should be
       // fine
       read_wr_id[per_replication] = mitsume_local_thread_get_wr_id(local_inf);
       userspace_one_read(ib_ctx, read_wr_id[per_replication],
@@ -2074,7 +2095,7 @@ int mitsume_tool_write(struct mitsume_consumer_metadata *thread_metadata,
           &thread_metadata->local_ctx_clt->all_lh_attr[MITSUME_GET_PTR_LH(
               newspace.replication_ptr[per_replication].pointer)];
       //[CAUTION] we are using the same memory space to read data which will
-      //corrupt the data. however, this is a read validation which should be
+      // corrupt the data. however, this is a read validation which should be
       // fine
       read_wr_id[per_replication] = mitsume_local_thread_get_wr_id(local_inf);
       userspace_one_read(ib_ctx, read_wr_id[per_replication],
